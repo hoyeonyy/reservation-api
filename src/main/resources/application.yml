@@ -1,0 +1,55 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/reservation_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: reservation
+    password: reservation123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate        # Flyway가 스키마 관리, Hibernate는 검증만
+    show-sql: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms           # Redis 응답 대기 최대 2초 (CB 트리거 시점과 연동)
+
+# Redisson은 spring.data.redis.*를 자동으로 읽어 RedissonClient 빈 생성
+# 커넥션 풀 등 고급 설정이 필요하면 classpath:redisson.yaml 파일 추가
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      redisInventory:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - com.reservation.api.exception.SoldOutException
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.reservation: DEBUG
+    org.flywaydb: INFO
